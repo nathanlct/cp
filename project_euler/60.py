@@ -5,51 +5,43 @@ order the result will always be prime. For example, taking 7 and 109, both 7109 
 Find the lowest sum for a set of five primes for which any two primes concatenate to produce another prime.
 """
 
+# load all primes below 1e8 (generated with sieve)
 with open('utils/primes_below_1e8.txt') as fp:
     primes = list(map(int, fp.read().split()))
+
+# turn into set for O(1) prime checking
 primes_set = set(primes)
-small_primes = [p for p in primes if p < 10000]
 
-# prebuild memoiz to test if 2 primes can be concatenated into 2 new primes
-memoiz = {}
-def are_concatenations_primes(p0, p1):  # with p0 < p1, p0 and p1 str
-    if p0 not in memoiz:
-        memoiz[p0] = {}
-    if p1 not in memoiz[p0]:
-        memoiz[p0][p1] = int(p0 + p1) in primes_set and int(p1 + p0) in primes_set
-    return memoiz[p0][p1]
 
-def _solve(initial_primes):
-    ans = []
-    for p0_lst in initial_primes:
-        max_p0 = p0_lst[-1][0]
-        for p in small_primes:
-            if p > max_p0 and p not in p0_lst:
-                candidate = True
-                p_str = str(p)
-                for p0 in reversed(p0_lst):
-                    if not are_concatenations_primes(p0[1], p_str):  # p > p0
-                        candidate = False
-                        break
-                if candidate:
-                    ans.append(p0_lst + [(p, p_str)])
-    return ans
+def solve(N, max_prime):
+    print(f'\nSolve for N={N}')
 
-def solve(N):
-    print(f'Solve for N={N}')
+    # get primes we're interested in testing
+    small_primes = [p for p in primes if p < max_prime]
 
-    # build all pairs of primes that have the property
-    # then add primes to each pair to forme triples, etc recursively
-    initial_primes = [[(p, str(p))] for p in small_primes]
-    for p_lst in initial_primes:
-        initial_primes = _solve(initial_primes)
-        if len(initial_primes[0]) == N:
-            break
+    # prebuild table to test if 2 primes can be concatenated into 2 new primes
+    are_concats_primes = {}
+    for i in range(len(small_primes)):
+        are_concats_primes[i] = {}
+        for j in range(i + 1, len(small_primes)):
+            are_concats_primes[i][j] = int(str(small_primes[i]) + str(small_primes[j])) in primes_set \
+                                and int(str(small_primes[j]) + str(small_primes[i])) in primes_set
 
-    for p_lst in initial_primes:
-        p_lst_int = [p[0] for p in  p_lst]
-        print(sum(p_lst_int), p_lst_int)
-    print()
+    # iteratively build all lists of primes with the property, of length 1, then 2, then ..., then N
+    candidates = [[i] for i in range(len(small_primes))]
+    for _ in range(N - 1):
+        new_candidates = []
+        for idx_lst in candidates:
+            for new_idx in range(idx_lst[-1] + 1, len(small_primes)):
+                if all([are_concats_primes[idx][new_idx] for idx in idx_lst]):
+                    new_candidates.append(idx_lst + [new_idx])
+        candidates = new_candidates
 
-# solve(4)
-solve(5)
+    # print results
+    for sol in candidates:
+        p_lst = [small_primes[i] for i in sol]
+        print(sum(p_lst), p_lst)
+
+# solve
+solve(N=4, max_prime=1000)
+solve(N=5, max_prime=10000)
